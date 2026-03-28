@@ -57,13 +57,13 @@ RUN if [ -n "${CUDA_VERSION_FOR_COMFY}" ]; then \
       /usr/bin/yes | comfy --workspace /comfyui install --version "${COMFYUI_VERSION}" --nvidia; \
     fi
 
+# Change working directory to ComfyUI
+WORKDIR /comfyui
+
 # Upgrade PyTorch if needed (for newer CUDA versions)
 RUN if [ "$ENABLE_PYTORCH_UPGRADE" = "true" ]; then \
       uv pip install --force-reinstall torch torchvision torchaudio --index-url ${PYTORCH_INDEX_URL}; \
     fi
-
-# Change working directory to ComfyUI
-WORKDIR /comfyui
 
 # Support for the network volume
 ADD src/extra_model_paths.yaml ./
