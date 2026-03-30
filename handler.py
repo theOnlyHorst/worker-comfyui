@@ -14,6 +14,7 @@ import tempfile
 import socket
 import traceback
 import logging
+import nextcloud_pywebdav
 
 from network_volume import (
     is_network_volume_debug_enabled,
@@ -790,7 +791,7 @@ def handler(job):
 
                                 print(f"worker-comfyui - Uploading {filename} to S3...")
                                 if os.environ.get("BUCKET_NAME"):
-                                    s3_url = rp_upload.upload_image(job_id, temp_file_path, bucket_name=os.environ.get(BUCKET_NAME))
+                                    s3_url = rp_upload.upload_image(job_id, temp_file_path, bucket_name=os.environ.get("BUCKET_NAME"))
                                 else:
                                     s3_url = rp_upload.upload_image(job_id, temp_file_path)
                                 os.remove(temp_file_path)  # Clean up temp file
@@ -818,6 +819,45 @@ def handler(job):
                                         print(
                                             f"worker-comfyui - Error removing temp file {temp_file_path}: {rm_err}"
                                         )
+                        elif (os.environ.get("NEXTCLOUD_ENDPOINT")):
+                            try:
+                                with tempfile.NamedTemporaryFile(
+                                    suffix=file_extension, delete=False
+                                ) as temp_file:
+                                    temp_file.write(image_bytes)
+                                    temp_file_path = temp_file.name
+                                print(
+                                    f"worker-comfyui - Wrote image bytes to temporary file: {temp_file_path}"
+                                )
+
+                                nextcloud_pywebdav.upload_file(base_url=os.environ.get("NEXTCLOUD_ENDPOINT"), username=os.environ.get("NEXTCLOUD_USERNAME"), app_password=os.environ.get("NEXTCLOUD_APP_PASSWORD"), remote_folder=os.environ.get("NEXTCLOUD_FOLDER"), local_file_path=temp_file_path, retries=3)
+                                os.remove(temp_file_path)
+
+                                print(
+                                    f"worker-comfyui - Uploaded {filename} to Nextcloud: {os.environ.get("NEXTCLOUD_FOLDER")}"
+                                )
+                                output_data.append(
+                                    {
+                                        "filename": filename,
+                                        "type": "nextcloud_url",
+                                        "data": "no_url_data_for_now",
+                                    }
+                                )
+
+                            except Exception as e:
+                                error_msg = f"Error uploading {filename} to Nextcloud: {e}"
+                                print(f"worker-comfyui - {error_msg}")
+                                errors.append(error_msg)
+                                if "temp_file_path" in locals() and os.path.exists(
+                                    temp_file_path
+                                ):
+                                    try:
+                                        os.remove(temp_file_path)
+                                    except OSError as rm_err:
+                                        print(
+                                            f"worker-comfyui - Error removing temp file {temp_file_path}: {rm_err}"
+                                        )
+
                         else:
                             # Return as base64 string
                             try:

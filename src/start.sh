@@ -29,7 +29,7 @@ export LD_PRELOAD="${TCMALLOC}"
 # so we fail fast with an actionable error message.
 # ---------------------------------------------------------------------------
 echo "worker-comfyui: Checking GPU availability..."
-if ! GPU_CHECK=$(/comfyui/.venv/bin/python -c "
+if ! GPU_CHECK=$(/comfyui/.venv/bin/python3 -c "
 import torch
 try:
     torch.cuda.init()
